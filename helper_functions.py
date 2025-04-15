@@ -1,6 +1,7 @@
 from typing import Dict, List
 
 import torch
+import torchvision
 from torch import nn
 import matplotlib.pyplot as plt
 
@@ -127,4 +128,41 @@ def plot_loss_curves(results: Dict[str, List[float]]):
   plt.title('Accuracy')
   plt.xlabel('Epochs')
   plt.legend()
+  plt.show()
+
+
+def pred_and_plot_image(model: torch.nn.Module,
+                    image_path: str,
+                    class_names: List[str] = None,
+                    transform=None,
+                    device=device):
+
+  target_image = torchvision.io.read_image(str(image_path)).type(torch.float32)
+
+  target_image /= 225.
+
+  if transform:
+    target_image = transform(target_image)
+
+  model.to(device)
+
+  model.eval()
+  with torch.inference_mode():
+    target_image = target_image.unsqueeze(0)
+
+    target_image_pred = model(target_image.to(device))
+
+  target_image_pred_probs = torch.softmax(target_image_pred, dim=1)
+
+  target_image_pred_label = torch.argmax(target_image_pred_probs, dim=1)
+
+  plt.imshow(target_image.squeeze().permute(1, 2, 0))
+
+  if class_names:
+    title = f'Pred: {class_names[target_image_pred_label.cpu()]} | Prob: {target_image_pred_probs.max().cpu():.3f}'
+  else:
+    title = f'Pred: {target_image_pred_label} | Prob: {target_image_pred_probs.max().cpu():.3f}'
+
+  plt.title(title)
+  plt.axis(False)
   plt.show()
